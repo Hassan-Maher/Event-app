@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\HasStore;
+use App\Http\Middleware\IsProvider;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,7 +14,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'isProvider' => IsProvider::class,
+            'hasStore'   => HasStore::class,
+        ]);   
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

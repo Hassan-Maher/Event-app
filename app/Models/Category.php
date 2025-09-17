@@ -4,15 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class City extends Model
+class Category extends Model
 {
-    
     protected $guarded = [
         'id'
     ];
 
-    public function product()
+
+    public function service()
     {
-        return $this->hasMany(Product::class);
+        return $this->hasMany(Service::class);
     }
 }

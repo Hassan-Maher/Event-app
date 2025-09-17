@@ -6,10 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class UserOtp extends Model
 {
-    protected $fillable = [
-        'user_id',
-        'code',
-        'expires_at',
+    protected $guarded = [
+        'id'
     ];
 
     public function user()

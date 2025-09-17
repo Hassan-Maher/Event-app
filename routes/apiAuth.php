@@ -12,9 +12,11 @@ Route::controller(AuthController::class)->group(function(){
     Route::post('/verify-reset-otp' , 'verifyResetOtp');
     Route::post('/reset-Password' , 'resetPassword');
 
-    Route::middleware('auth:sanctum')->group(function (){
-        Route::post('/store' , 'store');
-    });
+    Route::get('/cities' , 'index');
+
+
+
+    
     
 
     

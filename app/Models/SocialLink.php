@@ -4,15 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class City extends Model
+class SocialLink extends Model
 {
-    
     protected $guarded = [
         'id'
     ];
-
-    public function product()
-    {
-        return $this->hasMany(Product::class);
-    }
 }

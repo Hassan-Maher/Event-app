@@ -7,7 +7,7 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\ValidationException;
 
-class StoreRequest extends FormRequest
+class PackageRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -25,6 +25,7 @@ class StoreRequest extends FormRequest
             throw new ValidationException($validator , $response);
         }
     }
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -32,23 +33,15 @@ class StoreRequest extends FormRequest
      */
     public function rules(): array
     {
-            $store = $this->user()->store;
-
-            $commercialRule = ['required', 'string', 'max:50'];
-
-            if ($store) {
-                $commercialRule[] = 'unique:stores,commercial_number,' . $store->id;
-            } else {
-                $commercialRule[] = 'unique:stores,commercial_number';
-            }
-
         return [
-            'name'              => ['required', 'string', 'max:255'],
-            'logo'              => ['required', 'image', 'mimes:jpg,jpeg,png|max:2048'],
-            'commercial_number' => $commercialRule,
-            'latitude'         => ['required', 'numeric', 'between:-180,180'],
-            'longitude'         => ['required', 'numeric', 'between:-180,180'],
-            'city_id'           => ['required', 'exists:cities,id'],
+            'name'          => ['required' , 'string' , 'max:255'],
+            'description'   => ['nullable' , 'string'],
+            'image'         => ['required' , 'image' , 'mimes:jpg,jpeg,png'],
+            'price'         => ['required' , 'numeric', 'min:1'],
+            'offer'         => ['nullable' , 'min:1' , 'numeric'],
+            'duration'      => ['required' , 'string'],
+            'products'      => ['required', 'array', 'min:2'],
+            'products.*'    => ['integer', 'exists:products,id'],
         ];
     }
 }

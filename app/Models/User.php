@@ -18,13 +18,8 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'phone',
-        'role',
-        'is_verified'
+    protected $guarded = [
+        'id'
     ];
 
     /**
@@ -58,4 +53,6 @@ class User extends Authenticatable
     {
         return $this->hasOne(Store::class);
     }
+
+ 
 }

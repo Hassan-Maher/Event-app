@@ -6,18 +6,17 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
-use App\Http\Requests\StoreRequest;
+use App\Http\Resources\CityResource;
 use App\Http\Resources\StoreResource;
 use App\Http\Resources\UserResource;
+use App\Models\City;
 use App\Models\User;
 use App\Models\UserOtp;
-use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-
-use function PHPUnit\Framework\isEmpty;
 
 class AuthController extends Controller
 {
@@ -113,17 +112,37 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request)
     {
+
         $validated_data = $request->validated();
 
         if(! Auth::attempt($validated_data))
         {
-           return ApiResponse::sendResponse(200 , 'data not valid' , []);
+           return ApiResponse::sendResponse(404 , 'data not valid' , []);
         }
 
         $user = Auth::user();
-        if(! $user->is_verified)
-            return ApiResponse::sendResponse(200,'user not verified' , []);
+         
 
+        if(! $user->is_verified)
+        {
+            $new_otp = rand(100000, 999999);
+            
+            $record = UserOtp::updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'code'       => $new_otp,
+                    'expires_at' => now()->addMinutes(5),
+                    'is_verified' => false,
+                    ]
+                );
+                return ApiResponse::sendResponse(401,'user not verified' , ['is_verified' => $user->is_verified , 'otp' => $new_otp]);
+
+        }
+
+        if(! $user->store)
+        {
+            return ApiResponse::sendResponse(403  , 'please complete your store data' , ['has_store' => false]); 
+        }
         $token = $user->createToken('loginToken')->plainTextToken;
 
         return ApiResponse::sendResponse(200 , 'login successfully' , [
@@ -217,8 +236,10 @@ class AuthController extends Controller
         if(!$user)
             return ApiResponse::sendResponse(404 , 'user not found' , []);
 
-        if(isEmpty($user->otp) || ! $user->otp->is_verified)
-            return ApiResponse::sendResponse(200 , 'please verify your code' , []);
+        if(empty($user->otp) || ! $user->otp->is_verified)
+        {
+            return ApiResponse::sendResponse(200 , 'please verify your code' , []);    
+        }
 
         $record = $user->update([
                 'password' => Hash::make($request->password)
@@ -226,37 +247,19 @@ class AuthController extends Controller
         
         if($record)
         {
-            $token = $user->createToken('loginToken')->plainTextToken;
             return ApiResponse::sendResponse(200, 'password has been  reset successfylly' , [
                 'user' => new UserResource($user),
-                'token' => $token
             ]);
         }
     }
 
-    public function store(StoreRequest $request)
+
+
+    // get all cities 
+    public function index()
     {
-        $user = Auth::user();
-        if( $user->role != 'provider')
-            return ApiResponse::sendResponse(403 , 'you are not allowed to do that' , []);
-
-        if(! $user->is_verified)
-            return ApiResponse::sendResponse(403 , 'plaease verifiy your code' , []);
-
-        $validated_data = $request->validated();
-        
-        
-        if ($request->hasFile('logo')) 
-            {
-                $path = $request->file('logo')->store('stores', 'public');
-                $validated_data['logo'] = 'storage/' . $path;
-            }
-            
-        $validated_data['user_id'] = $user->id;
-        $store = Store::create($validated_data);
-
-        if($store)
-            return ApiResponse::sendResponse(201, 'store has been stored successfully' , new StoreResource($store));
+        $cities = City::get();
+        return ApiResponse::sendResponse(200,'cities retrievd successfully' , CityResource::collection($cities));
     }
 
 

@@ -6,18 +6,23 @@ use Illuminate\Database\Eloquent\Model;
 
 class Store extends Model
 {
-   protected $fillable = [
-        'name',
-        'logo',
-        'commercial_number',
-        'latitude',
-        'longitude',
-        'city_id',
-        'user_id'
+   protected $guarded = [
+      'id'
     ];
 
-    public function user()
+    public function provider()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class , 'user_id');
     }
+
+    public function package()
+    {
+        return $this->hasMany(Package::class);
+    }
+
+     public function product()
+    {
+        return $this->hasMany(Product::class);
+    }
+    
 }

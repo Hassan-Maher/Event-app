@@ -21,7 +21,8 @@ class StoreResource extends JsonResource
             'commercial_number' => $this->commercial_number,
             'latitude'          => $this->latitude,
             'longitude'         => $this->longitude,
-            'user_name'         => $this->user->name
+            'provider'          => new UserResource($this->whenLoaded('provider')),
+            'products'          =>  ProductMainResource::collection($this->whenLoaded('product'))
         ];
     }
 }
