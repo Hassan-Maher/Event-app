@@ -30,7 +30,7 @@ Route::middleware(['auth:sanctum' , 'isProvider'])->prefix('provider')->group(fu
             Route::post('/store' , 'store');
             Route::post('/update/{product_id}' , 'update');
             Route::get('/show/{product_id}' , 'show');
-            Route::get('/delete/{product_id}' , 'destroy');
+            Route::delete('/delete/{product_id}' , 'destroy');
         });
         
         
@@ -41,7 +41,7 @@ Route::middleware(['auth:sanctum' , 'isProvider'])->prefix('provider')->group(fu
             Route::post('/store' , 'store');
             Route::post('/update/{package_id}' , 'update');
             Route::get('/show/{package_id}' , 'show');
-            Route::get('/delete/{package_id}' , 'destroy');
+            Route::delete('/delete/{package_id}' , 'destroy');
         });
     
     

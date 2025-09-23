@@ -25,6 +25,7 @@ class AuthController extends Controller
         $validated_date = $request->validated();
         $validated_date['password'] = Hash::make($validated_date['password']);
         $validated_date['is_verified'] = false;
+        $validated_date['phone'] = ($request->country_code) . ($validated_date['phone']);
 
         $user = User::create($validated_date);
 
@@ -141,8 +142,12 @@ class AuthController extends Controller
 
         if(! $user->store)
         {
-            return ApiResponse::sendResponse(403  , 'please complete your store data' , ['has_store' => false]); 
+
+            $token = $user->createToken('loginToken')->plainTextToken;
+
+            return ApiResponse::sendResponse(403  , 'you dont have a store please complete your store data' , ['user' => new UserResource($user) , 'has_store' => false , 'token' => $token]); 
         }
+        
         $token = $user->createToken('loginToken')->plainTextToken;
 
         return ApiResponse::sendResponse(200 , 'login successfully' , [

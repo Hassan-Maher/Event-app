@@ -40,6 +40,7 @@ class RegisterRequest extends FormRequest
             'phone'     => ['required', 'string', 'regex:/^05[0-9]{8}$/', 'unique:users,phone'],
             'password'  => ['required', 'string', 'min:8', 'confirmed'],
             'role'      => ['required', 'in:beneficiary,provider'],
+            'country_code' => ['required' , 'regex:/^\+\d{1,4}$/' ]
         ];
     }
 }

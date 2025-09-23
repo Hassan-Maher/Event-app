@@ -17,7 +17,7 @@ class HasStore
     public function handle(Request $request, Closure $next):Response
 {
     if (!$request->user()->store) {
-        return ApiResponse::sendResponse(403 , 'please complete store data' , ['has_store' => false]);
+        return ApiResponse::sendResponse(403 , 'please complete store data' , [ 'has_store' => false , 'user' => $request->user()]);
     }
 
     return $next($request);

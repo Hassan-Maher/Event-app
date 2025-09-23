@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class PackageRequest extends FormRequest
@@ -33,6 +34,8 @@ class PackageRequest extends FormRequest
      */
     public function rules(): array
     {
+        $productsIds = $this->user()->store->product->pluck('id')->toArray();
+
         return [
             'name'          => ['required' , 'string' , 'max:255'],
             'description'   => ['nullable' , 'string'],
@@ -41,7 +44,7 @@ class PackageRequest extends FormRequest
             'offer'         => ['nullable' , 'min:1' , 'numeric'],
             'duration'      => ['required' , 'string'],
             'products'      => ['required', 'array', 'min:2'],
-            'products.*'    => ['integer', 'exists:products,id'],
+            'products.*'    => ['integer', 'exists:products,id' , Rule::in($productsIds)],
         ];
     }
 }
