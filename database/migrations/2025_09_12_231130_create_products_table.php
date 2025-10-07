@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('title'); 
             $table->string('main_image')->nullable(); 
             $table->text('description')->nullable(); 
-            $table->decimal('price', 10, 2); 
+            $table->decimal('price', 10, 2)->nullable(); 
             $table->json('available_days');
             $table->time('available_from'); 
             $table->time('available_to');   

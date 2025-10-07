@@ -25,8 +25,6 @@ class AuthController extends Controller
         $validated_date = $request->validated();
         $validated_date['password'] = Hash::make($validated_date['password']);
         $validated_date['is_verified'] = false;
-        $validated_date['phone'] = ($request->country_code) . ($validated_date['phone']);
-
         $user = User::create($validated_date);
 
         $otp = UserOtp::create([
@@ -46,7 +44,7 @@ class AuthController extends Controller
     public function verifyRegisterOtp(Request $request)
     {
          $validator = Validator::make($request->all(), [
-            'phone' => 'required',
+            'phone' => ['required', 'string', 'regex:/^\+\d{1,4}[0-9]{7,12}$/'],
             'code' => ['required' , 'digits:6'],
         ], [], []);
 
@@ -86,7 +84,7 @@ class AuthController extends Controller
     public function resendOtp(Request $request)
     {
          $request->validate([
-            'phone' => 'required'
+            'phone' => ['required', 'string', 'regex:/^\+\d{1,4}[0-9]{7,12}$/']
         ]);
 
         $user = User::where('phone', $request->phone)->first();
@@ -140,7 +138,7 @@ class AuthController extends Controller
 
         }
 
-        if(! $user->store)
+        if(! $user->store  && $user->role == 'provider')
         {
 
             $token = $user->createToken('loginToken')->plainTextToken;
@@ -163,7 +161,7 @@ class AuthController extends Controller
     public function resetPasswordOtp(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'phone' => ['required', 'regex:/^05[0-9]{8}$/']
+            'phone' => ['required', 'string', 'regex:/^\+\d{1,4}[0-9]{7,12}$/']
         ], [], []);
 
         if ($validator->fails()) {
@@ -195,7 +193,7 @@ class AuthController extends Controller
     public function verifyResetOtp(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'phone' => ['required', 'regex:/^05[0-9]{8}$/'],
+            'phone' => ['required', 'string', 'regex:/^\+\d{1,4}[0-9]{7,12}$/'],
             'code' => ['required' , 'digits:6'],
         ], [], []);
 
@@ -266,11 +264,5 @@ class AuthController extends Controller
         $cities = City::get();
         return ApiResponse::sendResponse(200,'cities retrievd successfully' , CityResource::collection($cities));
     }
-
-
-
-
-
-
-
+    
 }

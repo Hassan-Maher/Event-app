@@ -3,12 +3,12 @@
 namespace App\Http\Requests;
 
 use App\Helpers\ApiResponse;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
-use Illuminate\Validation\Rules\Password;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
-class RegisterRequest extends FormRequest
+class ProfileRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -18,7 +18,7 @@ class RegisterRequest extends FormRequest
         return true;
     }
 
-    protected function failedValidation(Validator $validator)
+     protected function failedValidation(Validator $validator)
     {
         if($this->is('api/*'))
         {
@@ -26,7 +26,6 @@ class RegisterRequest extends FormRequest
             throw new ValidationException($validator , $response);
         }
     }
-    
     /**
      * Get the validation rules that apply to the request.
      *
@@ -34,12 +33,10 @@ class RegisterRequest extends FormRequest
      */
     public function rules(): array
     {
+        $user = $this->user();
         return [
             'name'      => ['required', 'string', 'max:100'],
-            'email'     => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'phone'     => ['required', 'string', 'regex:/^\+\d{1,4}[0-9]{7,12}$/', 'unique:users,phone'],
-            'password'  => ['required', 'string', 'min:8', 'confirmed'],
-            'role'      => ['required', 'in:beneficiary,provider'],
+            'email'     => ['required', 'string', 'email', 'max:255',  Rule::unique('users', 'email')->ignore($user->id)], 
         ];
     }
 }

@@ -24,5 +24,16 @@ class Store extends Model
     {
         return $this->hasMany(Product::class);
     }
+
+
+    public function items()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    public function evaluations()
+    {
+        return $this->hasMany(Evaluation::class);
+    }
     
 }

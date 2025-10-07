@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\provider\HomeController;
+use App\Http\Controllers\Api\provider\OrderController;
 use App\Http\Controllers\Api\provider\PackageController;
 use App\Http\Controllers\Api\provider\ProductController;
 use App\Http\Controllers\Api\provider\SettingController;
@@ -49,6 +50,15 @@ Route::middleware(['auth:sanctum' , 'isProvider'])->prefix('provider')->group(fu
         // settings route
     
         Route::get('/social_links' ,[ SettingController::class,'social_links']);
+
+        // order routes
+
+        Route::controller(OrderController::class)->group(function(){
+            Route::get('/orders/items' , 'index');
+            Route::get('show-item/{item_id}' , 'show');
+            Route::post('/confirm-item/{item_id}' , 'confirm_items');
+
+        });
     });
 
     

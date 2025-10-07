@@ -60,10 +60,10 @@ class ProductController extends Controller
             
 
         $validated_data['available_from'] = Carbon::createFromFormat('g:i A', $request->available_from)->format('H:i:s');
-        $validated_data['available_to'] = Carbon::createFromFormat('g:i A', $request->available_to)->format('H:i:s');
+        $validated_data['available_to'] =   Carbon::createFromFormat('g:i A', $request->available_to)->format('H:i:s');
         $validated_data['store_id'] = $request->user()->store->id;
 
-        $product = Product::create(Arr::except($validated_data, ['extra_images']));
+        $product = Product::create(Arr::except($validated_data, ['extra_images' , 'options']));
 
         if(!$product)
             return ApiResponse::sendResponse(404 , 'product failed to store' , ['is_stored' => false]);
@@ -88,7 +88,27 @@ class ProductController extends Controller
                 }
         }
 
-        $product->load(['service' , 'city' , 'store.provider' , 'image']);
+        if ($request->has('options') && is_array($validated_data['options']))
+       {
+            foreach ($validated_data['options'] as $index => $option) 
+            {
+                if (isset($option['name']) && !isset($option['price'])) {
+                    return ApiResponse::sendResponse(422, "Please enter the price of option at index $index", []);
+                }
+
+                if (!isset($option['name']) && isset($option['price'])) {
+                    return ApiResponse::sendResponse(422, "Please enter the name of option at index $index", []);
+                }
+
+                if (isset($option['name']) && isset($option['price'])) {
+                    $product->options()->create([
+                        'name'  => $option['name'],
+                        'price' => $option['price'],
+                    ]);
+                }
+            }
+       }
+
         return ApiResponse::sendResponse(201 , 'product has been stored successfully' , [
             'product' => new ProductMainResource($product),
         ]);
@@ -144,6 +164,8 @@ class ProductController extends Controller
 
         if ($request->hasFile('extra_images') && !empty($validated_data['main_image'])) 
         {
+            $product->image()->delete();
+            
             $product->image()->create([
                 'image'   => $validated_data['main_image'],
                 'is_main' => true,

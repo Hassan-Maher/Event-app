@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\HasStore;
 use App\Http\Middleware\IsProvider;
+use App\Http\Middleware\IsUser;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -17,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'isProvider' => IsProvider::class,
             'hasStore'   => HasStore::class,
+            'isUser'   => IsUser::class,
         ]);   
     })
     ->withExceptions(function (Exceptions $exceptions): void {

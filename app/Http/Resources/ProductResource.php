@@ -19,7 +19,7 @@ class ProductResource extends JsonResource
             'id'              => $this->id,
             'title'           => $this->title,
             'main_image'      => url($this->main_image),
-            'price'           => $this->price ?? null,
+            'price'           => $this->price ?? 'المنتج له اكثر من خيار',
             'description'     => $this->description,
 
             'service'         => new ServiceResource($this->whenLoaded('service')),
@@ -31,20 +31,20 @@ class ProductResource extends JsonResource
                                 : $this->available_days,
 
             'available_from'  => $this->available_from
-                                ? Carbon::createFromFormat('H:i:s', $this->available_from)->format('g:i A')
+                                ?  $this->available_from->format('g:i A')
                                 : null,
             'available_to'    => $this->available_to
-                                ? Carbon::createFromFormat('H:i:s', $this->available_to)->format('g:i A')
+                                ?  $this->available_to->format('g:i A')
                                 : null,
 
-            'first_option'        => $this->first_option ?? null,
-            'first_option_price'  => $this->first_price ?? null,
-
-            'second_option'       => $this->second_option ?? null,
-            'second_option_price' => $this->second_price ?? null,
-
-            'third_option'        => $this->third_option ?? null,
-            'third_option_price'  => $this->third_price ?? null,
+            'options' =>       $this->options? $this->whenLoaded('options')
+            ->map(function($option){
+                return [
+                    'id' => $option->id,
+                    'name' => $option->name,
+                    'price' => $option->price
+                ];
+            }):null,
 
             'all_images'      => ProductImageResource::collection($this->whenLoaded('image')),
 ];

@@ -21,5 +21,10 @@ class Package extends Model
         return $this->belongsTo(Store::class);
     }
 
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class, 'item_id')
+            ->where('item_type', 'package');
+    }
 
 }

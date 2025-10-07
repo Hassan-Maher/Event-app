@@ -45,14 +45,40 @@ class User extends Authenticatable
         ];
     }
 
-        public function otp()
+    public function otp()
     {
         return $this->hasOne(UserOtp::class);
     }
-        public function store()
+
+    public function store()
     {
         return $this->hasOne(Store::class);
     }
+    
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
 
- 
+    public function evaluations()
+    {
+        return $this->hasMany(Evaluation::class);
+    }
+
+    public function events()
+    {
+        return $this->hasMany(Event::class);
+    }
+
+    public function sentInvitations()
+    {
+        return $this->hasMany(EventInvitation::class , 'inviter_id');
+    }
+
+    public function recievedInvitations()
+    {
+        return $this->hasMany(EventInvitation::class , 'invitee_id');
+    }
+
+
 }

@@ -42,7 +42,7 @@ class ProductRequest extends FormRequest
             'title'          => ['required', 'string', 'max:255'],
             'description'    => ['nullable', 'string'],
 
-            'price'          => ['required_without_all:first_price,second_price,third_price' , 'nullable' , 'numeric' , 'min:1'],
+            'price'          => ['required_without:options','nullable' , 'nullable' , 'numeric' , 'min:1'],
 
             'city_id'        => ['required', 'exists:cities,id'],
             'available_days' => ['required', 'array'],
@@ -52,18 +52,31 @@ class ProductRequest extends FormRequest
 
 
             
-            'first_option'   => ['required_with:second_option','required_with:third_option' ,'required_with:first_price', 'nullable', 'string', 'max:255'],
-            'first_price'    => ['required_without_all:price,second_price,third_price', 'required_with:first_option','nullable','numeric','min:1'],
-
-            'second_option'  => ['required_with:third_option' ,'required_with:second_price', 'nullable', 'string', 'max:255'],
-            'second_price'   => ['required_without_all:price,first_price,third_price','required_with:second_option','nullable','numeric','min:1'],
-
-            'third_option'   => ['required_with:third_price','nullable', 'string', 'max:255'],
-            'third_price'    => ['required_without_all:price,first_price,second_price','required_with:third_option','nullable','numeric','min:1'],
+            'options'         => [ 'nullable' ,'array' , 'min:2'],
+            'options.*.name'  => [ 'required_with:options.*.price','string' , 'max:255'],
+            'options.*.price' => [ 'required_with:options.*.name','numeric' , 'min:1']
 
 
 
         ];
-
     }
+
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            $price = $this->input('price');
+            $options = $this->input('options', []);
+
+            $hasOptionPrice = collect($options)->contains(function ($opt) {
+                return !empty($opt['price']);
+            });
+
+            if ($price && $hasOptionPrice) {
+                $validator->errors()->add('price', 'لا يمكن إدخال سعر للمنتج وفي نفس الوقت أسعار للخيارات.');
+            }
+        });
+    }
+
+
+    
 }

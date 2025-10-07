@@ -41,6 +41,8 @@ class PackageController extends Controller
         $validated_data = $request->validated();
         $validated_data['store_id'] = $request->user()->store->id;
 
+        $validated_data['final_price'] = $validated_data['offer'] ? $validated_data['price'] - ($validated_data['price'] * $validated_data['offer'] / 100): $validated_data['price'];
+
         if ($request->hasFile('image')) {
             $validated_data['image'] = StoreImage::upload($request->file('image') ,'packages');
         }
