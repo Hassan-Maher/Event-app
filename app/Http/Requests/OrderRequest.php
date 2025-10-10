@@ -40,7 +40,6 @@ class OrderRequest extends FormRequest
 
        
         return [
-            'price' => [ 'required', 'numeric' , 'min:1'],
             'offer' =>  [ 'nullable', 'numeric' , 'min:1' , 'max:100'],
             'payment_method' => ['required' , 'string'],
             'customer_name' =>  ['nullable',  'string', 'max:255'],
@@ -49,6 +48,7 @@ class OrderRequest extends FormRequest
             'longitude'         => ['required', 'numeric', 'between:-180,180'],
             'items' => ['required' , 'array' , 'min:1'],
             'items.*.item_id'  => 'required',
+            'items.*.type' => ['required' , 'in:product,package'],
             'items.*.quantity' => ['required' , 'min:1' , 'integer'],
             'items.*.option_id' => 'nullable|integer'
             
@@ -57,44 +57,77 @@ class OrderRequest extends FormRequest
         public function withValidator($validator)
         {
             $validator->after(function ($validator) {
-                if(empty($this->items))
-                {
-                    return;
+                if ($validator->errors()->any()) {
+                    return; 
                 }
+                
                 foreach ($this->items as $index => $item) {
 
-                    $product =Product::find($item['item_id']);
-                    $package = Package::find($item['item_id']);
+                    if($item['type'] == 'product')
+                    {
+                        $product =Product::find($item['item_id']);
 
-                    if (!$product && !$package) {
-                        $validator->errors()->add("items.$index.item_id", 'Item must exist in either products or packages.');
-                    }
+                        if(!$product)
+                        {
+                            $validator->errors()->add("items.$index.item_id", 'invalid product id.');
+                        }
 
-                    if ($product) {
-                        $options = $product->options;
+                        if ($product) 
+                        {
+                            if (! in_array(strtolower(now()->format('l')), $product->available_days)) 
+                            {
+                                $validator->errors()->add("items.$index.item_id",'Item ' . $index . ' is not available on this day');
+                            }
 
-                        if ($options->isNotEmpty() && empty($item['option_id'])) {
+                            if (! now()->between($product->available_from, $product->available_to)) 
+                            {
+                                $validator->errors()->add("items.$index.item_id",'Item ' . $index . ' is not available at this time');
+                            }
 
-                            $validator->errors()->add("items.$index.option_id", 'This product requires an option.');
-                        } 
-                        elseif (!empty($item['option_id'])) {
-                            if (! ProductOption::where('id', $item['option_id'])->exists()) {
-                                $validator->errors()->add("items.$index.option_id", 'Invalid option ID.');
+                            $options = $product->options;
+                            if ($options->isNotEmpty() && empty($item['option_id'])) {
+
+                                $validator->errors()->add("items.$index.option_id", 'This product requires an option.');
                             } 
-                            elseif ($options->isEmpty()) {
-                                $validator->errors()->add("items.$index.option_id",'This product does not contain options.');
-                            } 
-                            elseif (!$options->where('id', $item['option_id'])->count()) {
-                                $validator->errors()->add("items.$index.option",'This option does not belong to this product.');
+                            elseif (!empty($item['option_id'])) {
+                                if (! ProductOption::where('id', $item['option_id'])->exists()) {
+                                    $validator->errors()->add("items.$index.option_id", 'Invalid option ID.');
+                                } 
+                                elseif ($options->isEmpty()) {
+                                    $validator->errors()->add("items.$index.option_id",'This product does not contain options.');
+                                } 
+                                elseif (!$options->where('id', $item['option_id'])->count()) {
+                                    $validator->errors()->add("items.$index.option",'This option does not belong to this product.');
+                                }
                             }
                         }
                     }
 
-                    if ($package) {
-                        if (!empty($item['option'])) {
-                            $validator->errors()->add("items.$index.option", 'Option is not allowed for packages.');
+                    if($item['type'] == 'package')
+                    {
+                        $package = Package::find($item['item_id']);
+
+                        if (!$package) 
+                        {
+                            $validator->errors()->add("items.$index.item_id", 'invalid package id.');
+                        }
+
+                        if ($package)
+                        {
+                            if (!empty($item['option_id'])) {
+                                $validator->errors()->add("items.$index.option", 'Option is not allowed for packages.');
+                            }
+
+                            if($package->end_date < now())
+                            {
+                                $validator->errors()->add("items.$index.option", 'package is not available ');
+                            }
                         }
                     }
+
+
+                    
+                    
                 }
             });
         }

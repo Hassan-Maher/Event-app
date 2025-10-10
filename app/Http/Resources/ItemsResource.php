@@ -17,13 +17,20 @@ class ItemsResource extends JsonResource
             'id'            => $this->id,
             'quantity'      => $this->quantity,
             'price'         => $this->price,
-            'item_type'     => $this->item_type,
+            'type'     => $this->type,
             'item_id'       => $this->item_id,
             'item_status'   => $this->status,
-            'item_details'  => ($this->item_type == 'product') ? new ProductMainResource($this->whenLoaded('product')) : new PackageResource($this->whenLoaded('package')),
-            'option'        => $this->whenLoaded('option'),
-            'rejected reason_if item rejected' => $this->status == 'rejected'? $this->rejected_reason:'الطلب ليس بمرفوض',
-            'order' => new OrderResource($this->whenLoaded('order'))
+            'rejected reason_if item rejected' => $this->when($this->status == 'rejected', $this->rejected_reason),
+            'item_details' => $this->when($this->relationLoaded('product') ||$this->relationLoaded('package') ,
+                $this->type == 'product'? 
+            [
+            'product' => new ProductMainResource($this->product),
+            'chosen_option' => $this->when($this->option_id ,new ProductOptionResource($this->option)),
+            ]
+            :
+            new PackageResource($this->package)
+            ),
+
         ];
     }
 }

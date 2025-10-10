@@ -20,7 +20,7 @@ return new class extends Migration
             $table->decimal('price' , 8 ,2);
             $table->decimal('offer' , 5 ,2)->nullable();
             $table->decimal('final_price' , 8 ,2);
-            $table->string('duration');
+            $table->dateTime('end_date');
             $table->timestamps();
         });
     }

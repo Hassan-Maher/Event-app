@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\ItemsResource;
 use App\Http\Resources\OrderResource;
 use App\Http\Resources\StoreResource;
+use App\Http\Resources\UserResource;
 use App\Models\Order;
 use App\Models\OrderItem;
 use Illuminate\Http\Request;
@@ -38,13 +39,17 @@ class OrderController extends Controller
 
     public function show(Request $request , $item_id)
     {
-        $item = OrderItem::with(['order' , 'product' , 'package'])->findOrFail($item_id);
+        $item = OrderItem::with(['product' , 'package'])->findOrFail($item_id);
+        $order_user = $item->order->user;
+
         if($request->user()->store->id != $item->store_id)
         {
             return ApiResponse::sendResponse(403 , 'this item is isnt for you' , []);
         }
 
-        return ApiResponse::sendResponse(200 , 'item retrieved successfully' , new ItemsResource($item));
+        return ApiResponse::sendResponse(200 , 'item retrieved successfully' ,[ 
+        'item' =>     new ItemsResource($item) ,
+        'user' => new UserResource($order_user)]);
 
     }
 

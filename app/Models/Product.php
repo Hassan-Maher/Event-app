@@ -45,9 +45,30 @@ class Product extends Model
         return $this->belongsTo(Store::class);
     }
 
+    // لو عايز اعرف تفاصيل كل منتج اتاخد في الاوردرات يعني بالكميه وبالابشن بتاعه 
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class, 'item_id')
+            ->where('item_type', 'product');
+    }
+    // لو عايز اعرف الاوردرات اللي خدت المنتج بس 
+    
+    public function orders()
+    {
+        return $this->belongsToMany(Order::class, 'order_items' , 'item_id' , 'order_id')
+            ->where('item_type', 'product');
+    }
+
+
+    public function event_Items()
+    {
+        return $this->hasMany(EventItem::class, 'item_id')
+            ->where('item_type', 'product');
+    }
+
+    public function events()
+    {
+        return $this->belongsToMany(Event::class, 'event_items' , 'item_id' , 'event_id')
             ->where('item_type', 'product');
     }
 
@@ -56,6 +77,4 @@ class Product extends Model
         return $this->hasMany(ProductOption::class);
     }
 
- 
-    
 }

@@ -14,8 +14,12 @@ class ProductOption extends Model
         return $this->belongsTo(Product::class);
     }
 
-    public function items()
+    public function order_items()
     {
         return $this->hasMany(OrderItem::class);
+    }
+    public function event_items()
+    {
+        return $this->hasMany(EventItem::class , 'option_id');
     }
 }

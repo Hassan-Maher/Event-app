@@ -60,7 +60,7 @@ Route::middleware(['auth:sanctum' , 'isUser'])->group(function(){
 
         Route::post('/{event_id}/send_invitation' , 'send_invitation');
         Route::get('/{event_id}/guests' , 'index_guests');
-        Route::get('/{event_id}/my_invitations' , 'my_invitations');
+        Route::get('/my_invitations' , 'my_invitations');
         Route::get('/my_events' , 'my_events');
         Route::post('/invitation/{invitation_id}/confirm' , 'confirm_invitation');
     });

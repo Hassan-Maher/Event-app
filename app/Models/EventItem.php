@@ -15,7 +15,7 @@ class EventItem extends Model
         return $this->belongsTo(Event::class);
     }
 
-     public function product()
+    public function product()
     {
         return $this->belongsTo(Product::class, 'item_id');
         
@@ -24,14 +24,20 @@ class EventItem extends Model
     public function package()
     {
         return $this->belongsTo(Package::class, 'item_id');
-       
+    
     }
     
-
 
     public function store()
     {
         return $this->belongsTo(Store::class);
     }
+
+    public function option()
+    {
+        return $this->belongsTo(ProductOption::class, 'option_id');
+    }
+
+    
 
 }

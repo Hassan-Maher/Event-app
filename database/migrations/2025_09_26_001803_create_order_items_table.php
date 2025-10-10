@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('order_id')->constrained()->onDelete('cascade');
             $table->foreignId('store_id')->constrained()->onDelete('cascade');
             
-            $table->enum('item_type', ['product', 'package']); 
+            $table->enum('type', ['product', 'package']); 
             $table->unsignedBigInteger('item_id'); // ID للمنتج أو الباكدج
 
             $table->integer('quantity')->default(1);

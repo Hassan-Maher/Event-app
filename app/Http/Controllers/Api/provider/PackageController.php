@@ -10,8 +10,11 @@ use App\Http\Resources\PackageResource;
 use App\Http\Resources\ProductResource;
 use App\Models\Package;
 use App\Models\PackageProduct;
+use App\Models\Product;
+use App\Models\ProductOption;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use League\Uri\Idna\Option;
 
 class PackageController extends Controller
 {
@@ -37,26 +40,41 @@ class PackageController extends Controller
      */
     public function store(PackageRequest $request)
     {
-       
-        $validated_data = $request->validated();
-        $validated_data['store_id'] = $request->user()->store->id;
 
-        $validated_data['final_price'] = $validated_data['offer'] ? $validated_data['price'] - ($validated_data['price'] * $validated_data['offer'] / 100): $validated_data['price'];
+        $validated_data = $request->validated();
+
+        $validated_data['store_id'] = $request->user()->store->id;
+        $validated_data['end_date'] = now()->addDays(intval($request->duration));
+        $validated_data['price'] = 0 ; //default
+
+        $validated_data['final_price'] = 0; // default
 
         if ($request->hasFile('image')) {
             $validated_data['image'] = StoreImage::upload($request->file('image') ,'packages');
         }
 
-        $package = Package::create(Arr::except($validated_data, ['products']));
+        $package = Package::create(Arr::except($validated_data, ['products' , 'duration']));
 
         if (! $package) {
-            return ApiResponse::sendResponse(401, 'package failed to store', []);
+            return ApiResponse::sendResponse(500, 'package failed to store', []);
         }
 
-        if (! empty($validated_data['products'])) {
-            $package->product()->attach($validated_data['products']);
+        if (! empty($validated_data['products']) ) 
+        {
+            $data = [];
+            foreach($validated_data['products'] as $product)
+            {
+                $data[$product['id']] = ['option_id' => $product['option_id']??null];
+            }
+            $package->product()->attach($data);
         }
 
+        $price = $package->calculate_price();
+        $final_price =  $validated_data['offer'] ? $price - ($price * $validated_data['offer'] / 100): $price;
+        $package->update(['price' => $price ,
+        'final_price' => $final_price
+        ]);
+        
         return ApiResponse::sendResponse(201, 'package stored successfully', new PackageResource($package));
     }
 
@@ -66,12 +84,18 @@ class PackageController extends Controller
      */
     public function show($package_id)
     {
-        $package = Package::with(['store' , 'product'])->find($package_id);
+        $package = Package::with(['store' , 'product' , 'orders.user' , 'events.user'])->find($package_id);
+
+        $orders_users_name  = $package->orders->pluck('user.name')->unique()->values()->toArray();
+        $events_users_name  = $package->events->pluck('user.name')->unique()->values()->toArray();
 
         if(!$package)
             return ApiResponse::sendResponse(404 , 'Package Not Found' , []);
 
-        return ApiResponse::sendResponse(200 , 'package retrieved successfully' , new PackageResource($package));
+        return ApiResponse::sendResponse(200 , 'package retrieved successfully' , 
+        ['package'=>new PackageResource($package) ,
+        'orders_users_name' => $orders_users_name , 
+        'event_orders_name' => $events_users_name]);
     }
 
     /**
@@ -89,22 +113,39 @@ class PackageController extends Controller
 
         $validated_data = $request->validated();
         $validated_data['store_id'] = $request->user()->store->id;
+        $validated_data['end_date'] = now()->addDays($request->duration);
+        $validated_data['price'] = 0 ; //default
+
+        $validated_data['final_price'] = 0;
+
 
         if ($request->hasFile('image')) {
             $validated_data['image'] = StoreImage::upload($request->file('image') ,'packages');
         }
 
-        $record = $package->update(Arr::except($validated_data, ['products']));
+        $record = $package->update(Arr::except($validated_data, ['products' , 'duration']));
 
         if (! $record) {
             return ApiResponse::sendResponse(401, 'package failed to store', []);
         }
 
-        if (! empty($validated_data['products'])) {
-            $package->product()->sync($validated_data['products']);
-        }
+        if (! empty($validated_data['products']) ) 
+            {
+                $data = [];
+                foreach($validated_data['products'] as $product)
+                {
+                    $data[$product['id']] = ['option_id' => $product['option_id']??null];
+                }
+                $package->product()->sync($data);
+            }
+        
+        $price = $package->calculate_price();
+        $final_price =  $validated_data['offer'] ? $price - ($price * $validated_data['offer'] / 100): $price;
+        $package->update(['price' => $price ,
+        'final_price' => $final_price
+        ]);
 
-        return ApiResponse::sendResponse(201, 'package updated successfully',[]);
+       return ApiResponse::sendResponse(201, 'package updated successfully',[]);
     }
 
     /**

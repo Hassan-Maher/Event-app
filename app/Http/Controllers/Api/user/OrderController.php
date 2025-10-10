@@ -31,32 +31,30 @@ class OrderController extends Controller
         
         $order = Order::create(Arr::except($validated_data, ['items']));
 
-        
-
-
         foreach($request->items as $item)
         {
-            $product = Product::find($item['item_id']);
-            $package = Package::find($item['item_id']);
-            if($product)
+            if($item['type'] == 'product')
             {
-                $item['item_type'] = 'product';
-                $item['store_id'] = $product->store_id;
-                if(!empty($item['option_id']))
+                $product = Product::find($item['item_id']);
+                if($product)
                 {
-                    $option = ProductOption::find($item['option_id']);
-                    $item['price'] = $option->price;
+                    $item['store_id'] = $product->store_id;
+                    if(!empty($item['option_id']))
+                    {
+                        $option = ProductOption::find($item['option_id']);
+                        $item['price'] = $option->price;
+                    }
+                    else{
+                        $item['price'] = $product->price;
+                    }
+                    
                 }
-                else{
-                    $item['price'] = $product->price;
-                }
-                
             }
-            else if($package)
-                {
-                    $item['item_type'] = 'package';
-                    $item['store_id'] = $package->store_id;
-                    $item['price'] = $package->final_price;
+            elseif($item['type'] == 'package')
+            {
+                $package = Package::find($item['item_id']);                
+                $item['store_id'] = $package->store_id;
+                $item['price'] = $package->final_price;
             }
 
 
@@ -71,14 +69,13 @@ class OrderController extends Controller
         ]);
         
 
-        return ApiResponse::sendResponse(200, 'order stored successfully please wait to provider confirmed' , new OrderResource($order));
+        return ApiResponse::sendResponse(200, 'order stored successfully please wait to provider confirmed' , new OrderResource($order->refresh()));
     }
 
 
     public function show($order_id)
     {
         
-
         $order = Order::with(['items.product' , 'items.package'])->findOrFail($order_id);
 
         return ApiResponse::sendResponse(200 , 'order retrieved successfully' , new OrderResource($order));

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\ProductOption;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -17,9 +18,17 @@ class EventItemResource extends JsonResource
         return [
             'id' => $this->id,
             'item_id' => $this->item_id,
-            'item_type' => $this->item_type,
+            'type' => $this->type,
             'price' => $this->price,
-            'item_details' => $this->item_type == 'product'? new ProductMainResource($this->whenLoaded('product')): new PackageResource($this->whenLoaded('package')),
+            'item_details' => $this->when($this->relationLoaded('product') ||$this->relationLoaded('package') ,
+                $this->type == 'product'? 
+            [
+            'product' => new ProductMainResource($this->product),
+            'chosen_option' =>$this->when($this->option_id,  new ProductOptionResource($this->option)),
+            ]
+            :
+            new PackageResource($this->package)
+            ),
         ];
     }
 }

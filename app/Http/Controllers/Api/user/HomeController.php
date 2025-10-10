@@ -78,13 +78,9 @@ class HomeController extends Controller
                     $query->whereBetween('final_price', [$request->start_price, $request->final_price]);
                 })
                 ->when($request->has('date') , function ($query) use ($request){
-                    $query->whereDosentHave('products' , function($q) use($request){
                         $date = Carbon::createFromFormat('Y-m-d g:i A' , $request->date);
-                        $day = strtolower($date->format('l'));
-                        $q->whereJsonDoesntContain('available_days' , $day)->where('available_from', '>', $date->format('H:i:s'))
-                        ->where('available_to', '<', $date->format('H:i:s'));
-                    });
-                })
+                        $query->where('end_date' , '>', $date->format('H:i:s'));
+                    })
                 ->get();
             
 

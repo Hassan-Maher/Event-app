@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('event_id')->constrained()->onDelete('cascade');
             $table->foreignId('store_id')->constrained()->onDelete('cascade');
             $table->foreignId('option_id')->nullable()->constrained('product_options')->onDelete('cascade');
-            $table->enum('item_type' , ['product' , 'package']);
+            $table->enum('type' , ['product' , 'package']);
             $table->unsignedBigInteger('item_id');
             $table->decimal('price', 10, 2); 
             $table->enum('status' , ['pending' , 'accepted' , 'rejected'])->default('pending');

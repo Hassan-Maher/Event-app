@@ -10,8 +10,10 @@ use App\Http\Resources\ProductResource;
 use App\Http\Resources\ServiceResource;
 use App\Http\Resources\ProductImageResource;
 use App\Http\Resources\ProductMainResource;
+use App\Http\Resources\ProductOptionResource;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\ProductOption;
 use App\Models\Service;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -121,12 +123,17 @@ class ProductController extends Controller
      */
     public function show($product_id)
     {
-        $product = Product::with('store.provider' , 'service' , 'city' , 'image')->find($product_id);
+        $product = Product::with('store.provider' , 'service' , 'city' , 'image' , 'orders.user' , 'events.user')->find($product_id);
 
+        $orders_users_name  = $product->orders->pluck('user.name')->unique()->values()->toArray();
+        $events_users_name  = $product->events->pluck('user.name')->unique()->values()->toArray();
         if(!$product)
             return ApiResponse::sendResponse(404 , 'product_not_found' , ['is_found' => false]);
 
-        return ApiResponse::sendResponse(200 , 'product retrieved successfully' , new ProductResource($product));
+        return ApiResponse::sendResponse(200 , 'product retrieved successfully' , 
+        ['product' => new ProductResource($product) ,
+        'orders_users_name' => $orders_users_name , 
+        'event_orders_name' => $events_users_name]);
 
     }
 
@@ -180,8 +187,26 @@ class ProductController extends Controller
                 ]);
             }
         }
+        else{
+            $product->images()->delete();
+        }
 
         return ApiResponse::sendResponse(201 , 'product updated successfully' , []);
+    }
+
+
+    public function show_option(Request $request , $option_id)
+    {
+        $option = ProductOption::with(['order_items.order.user' , 'event_items.event.user'])->findOrFail($option_id);
+
+        $orders_users_name = $option->order_items->pluck('order.user.name')->unique()->values()->toArray();
+        $event_users_name = $option->event_items->pluck('event.user.name')->unique()->values()->toArray();
+
+        return ApiResponse::sendResponse(200 , 'option retrieved successfully'  , 
+        ['option' => new ProductOptionResource($option) , 
+        'order_users_name' => $orders_users_name , 
+        'event_users_name' => $event_users_name]);
+
     }
 
     /**
@@ -203,6 +228,8 @@ class ProductController extends Controller
 
         return ApiResponse::sendResponse(200 , 'product is deleted successfully' ,[]);
     }
+
+
 
 
 

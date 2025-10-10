@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\user;
 use App\Helpers\ApiResponse;
 use App\Helpers\StoreImage;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\EditItemRequest;
 use App\Http\Requests\EventRequest;
+use App\Http\Resources\EventItemResource;
 use App\Http\Resources\EventMainResource;
 use App\Http\Resources\EventResource;
 use App\Models\Event;
@@ -41,21 +43,13 @@ class EventController extends Controller
 
         if($request->has('items'))
         {
-            foreach($request->items  as $item)
+            foreach($request->items as $item)
+        {
+            if($item['type'] == 'product')
             {
                 $product = Product::find($item['item_id']);
-                $package = Package::find($item['item_id']);
-
-                if($package)
-                {
-                    $item['type']     = 'package';
-                    $item['store_id'] = $package->store_id;
-                    $item['price']    = $package->final_price;
-                    
-                }
                 if($product)
                 {
-                    $item['type'] = 'product';
                     $item['store_id'] = $product->store_id;
                     if(!empty($item['option_id']))
                     {
@@ -65,7 +59,15 @@ class EventController extends Controller
                     else{
                         $item['price'] = $product->price;
                     }
+                    
                 }
+            }
+            elseif($item['type'] == 'package')
+            {
+                $package = Package::find($item['item_id']);                
+                $item['store_id'] = $package->store_id;
+                $item['price'] = $package->final_price;
+            }
                 $event->items()->create($item);
             }
         }
@@ -195,80 +197,61 @@ class EventController extends Controller
         return ApiResponse::sendResponse(200 , 'images is empty' , []);
     }
 
-    public function edit_item(Request $request , $event_id)
+    public function edit_item(EditItemRequest $request , $event_id)
     {
-        $validator = Validator::make($request->all(), [
-        'item_id'   => ['required'],
-        'option_id' => ['nullable'],
-        'quantity'  => ['required' , 'integer' , 'min:1']
-        ], [], []);
-        
-        if ($validator->fails()) {
-            return ApiResponse::sendResponse(422, 'verify Validation Errors', $validator->messages()->all());
-        }
-        $product = Product::find($request->item_id);
-        $package = Package::find($request->item_id);
-        if(!$product && !$package)
-            return ApiResponse::sendResponse(403 , 'invalid item_id' , []);
-
-        if($package && empty($request->option_id))
-        {
-            $type = 'package';
-            $price = $package->final_price;
-            $store_id = $package->store_id;
-        }
-        if($package && !empty($request->option_id))
-        {
-           return ApiResponse::sendResponse(403 , 'package doesnt have option ' ,[]);
-        }
-        if ($product) 
-        {
-            $options = $product->options;
-
-            if ($options->isNotEmpty() && empty($request['option_id'])) {
-
-                return ApiResponse::sendResponse(422 , 'This product requires an option.' , []);
-            } 
-            elseif (!empty($item['option'])) {
-                if (! ProductOption::where('id', $request['option_id'])->exists()) {
-                    return ApiResponse::sendResponse(422 , 'Invalid option ID.' , []);
-                } 
-                elseif ($options->isEmpty()) {
-                    return ApiResponse::sendResponse(422 ,'This product does not contain options.' , []);
-                } 
-                elseif (!$options->where('id', $request['option_id'])->count()) {
-                    return ApiResponse::sendResponse(422 ,'This option does not belong to this product.' , []);
-                }
-            }
-
-            $option = ProductOption::find($request->option_id);
-            $type = 'product';
-            $price = $option?$option->price:$product->price;
-            $store_id = $product->store_id;
-        }
-
         $event = Event::findOrFail($event_id);
-
         if($event->user_id != $request->user()->id)
         {
             return ApiResponse::sendResponse(403 , 'forbidden' , []);
 
         }
+        $data = [];
+            if($request['type'] == 'product')
+            {
+                $product = Product::find($request['item_id']);
+                if($product)
+                {
+                    $data['item_id'] = $request->item_id;
+                    $data['type'] = 'product';
+                    $data['store_id'] = $product->store_id;
+                    if(!empty($request->option_id))
+                    {
+                        $option = ProductOption::find($request['option_id']);
+                        $data['option_id'] = $request->option_id;
+                        $data['price'] = $option->price;
+                    }
+                    else{
+                        $data['price'] = $product->price;
+                    }
+                    
+                }
+            }
+            elseif($request['type'] == 'package')
+            {
+                $package = Package::find($request['item_id']);    
+                $data['item_id'] = $request->item_id;
+                $data['type'] = 'package';
+                $data['store_id'] = $package->store_id;
+                $data['price'] = $package->final_price;
+            }
 
-        $item = $event->items()->create([
-            'item_id' => $request->item_id,
-            'item_type' => $type,
-            'price' => $price,
-            'store_id' => $store_id,
-            'quantity' => $request->quantity
-        ]);
+        $data['quantity'] = $request->quantity;
 
-        return ApiResponse::sendResponse(201 , 'item stored successfully' ,['item' => $item , 'event_id' => $event->id] );
+        $item = $event->items()->create($data);
+        $item->load(['product' , 'package']);
+
+
+        $event->update(['price' => $event->calculatePrice()]);
+
+        return ApiResponse::sendResponse(201 , 'item stored successfully' , ['item' =>new  EventItemResource($item)]);
     }
 
     public function delete_item(Request $request , $id)
     {
-        $item = EventItem::findOrFail($id);
+        $item = EventItem::find($id);
+        if(!$item)
+            return ApiResponse::sendResponse(404 , 'item not found' , []);
+        $event =$item->event;
         if($item->event->user_id != $request->user()->id)
         {
             return ApiResponse::sendResponse(403 , 'forbidden' , []);
@@ -279,6 +262,9 @@ class EventController extends Controller
         }
 
         $item->delete();
+
+        $event->update(['price' => $event->calculatePrice()]);
+
         return ApiResponse::sendResponse(200 , 'item deleted successfully', []);
     }
 
@@ -384,6 +370,11 @@ class EventController extends Controller
                 $failed_invitations[] = ['name' => $user->name , 'reason' => ' already invited'];
                 continue; 
             }
+            if($request->user()->id == $invitee_id)
+            {
+                $failed_invitations[] = ['name' => $user->name , 'reason' => ' you send to your self'];
+                continue;
+            }
 
             $event->invitations()->create([
                 'inviter_id' => $inviter_id,
@@ -403,7 +394,7 @@ class EventController extends Controller
         }
         elseif(count($sucess_invitations))
         {
-            return ApiResponse::sendResponse(200 , 'All invitation end successfully' , []);
+            return ApiResponse::sendResponse(200 , 'All invitation send successfully' , []);
         }
 
     }
@@ -442,7 +433,7 @@ class EventController extends Controller
 
     public function my_invitations(Request $request)
     {
-         $validator = Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'status' => ['in:pending,accepted,rejected'],
         ], [], []);
 
@@ -461,7 +452,7 @@ class EventController extends Controller
         $invitations_data = $invitations->map(function($invitation){
             return [
                 'id' => $invitation->id,
-                'inviter_name' => $invitation->event->user->name,
+                'inviter' => $invitation->event->user->name,
                 'status' => $invitation->status,
                 'event' => new EventMainResource($invitation->event)
             ];
