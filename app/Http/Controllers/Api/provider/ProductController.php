@@ -111,9 +111,9 @@ class ProductController extends Controller
             }
        }
 
-        return ApiResponse::sendResponse(201 , 'product has been stored successfully' , [
-            'product' => new ProductMainResource($product),
-        ]);
+        return ApiResponse::sendResponse(201 , 'product has been stored successfully' , 
+             new ProductMainResource($product),
+        );
 
     
     }

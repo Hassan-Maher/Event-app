@@ -77,11 +77,11 @@ class ServiceController extends Controller
         }
         else
         {
-            $products = Product::first();
+            $products = Product::get();
         }
 
         if(count($products)> 0)
             return ApiResponse::sendResponse(200 , 'products retrieved succesfully' , ProductMainResource::collection($products));
-        return ApiResponse::sendResponse(200 , 'categories is empty' , []);
+        return ApiResponse::sendResponse(200 , 'products is empty' , []);
     }   
 }

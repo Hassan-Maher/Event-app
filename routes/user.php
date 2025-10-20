@@ -34,6 +34,7 @@ Route::middleware(['auth:sanctum' , 'isUser'])->group(function(){
     });
 
     Route::controller(ProfileController::class)->prefix('user')->group(function(){
+        Route::get('/' , 'index');
         Route::get('/orders' , 'index_orders');
         Route::get('/items/order/{order_id}' , 'index_items');
         Route::post('/profile/update' , 'update_profile');
@@ -62,9 +63,8 @@ Route::middleware(['auth:sanctum' , 'isUser'])->group(function(){
         Route::get('/{event_id}/guests' , 'index_guests');
         Route::get('/my_invitations' , 'my_invitations');
         Route::get('/my_events' , 'my_events');
-        Route::post('/invitation/{invitation_id}/confirm' , 'confirm_invitation');
+        Route::post('/invitation/event/{event_id}/confirm' , 'response');
     });
-
 
         Route::controller(HomeController::class)->group(function(){
             Route::get('/home' , 'index');

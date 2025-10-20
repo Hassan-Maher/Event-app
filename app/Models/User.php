@@ -75,10 +75,10 @@ class User extends Authenticatable
         return $this->hasMany(EventInvitation::class , 'inviter_id');
     }
 
-    public function recievedInvitations()
-    {
-        return $this->hasMany(EventInvitation::class , 'invitee_id');
-    }
+    // public function recievedInvitations()
+    // {
+    //     return $this->hasMany(EventInvitation::class , 'invitee_id');
+    // }
 
 
 }

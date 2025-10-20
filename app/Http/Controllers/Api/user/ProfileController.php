@@ -18,6 +18,13 @@ use Pest\Plugins\Profile;
 
 class ProfileController extends Controller
 {
+
+    public function index(Request $request)
+    {
+        $user = $request->user();
+
+        return ApiResponse::sendResponse(200 , 'data retrieved successfully' , new UserResource($user));
+    }
     public function index_orders(Request $request)
     {
 

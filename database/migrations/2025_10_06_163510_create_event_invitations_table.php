@@ -15,11 +15,13 @@ return new class extends Migration
             $table->id();
             $table->foreignId('event_id')->constrained()->onDelete('cascade');
             $table->foreignId('inviter_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('invitee_id')->constrained('users')->onDelete('cascade');
-            $table->enum('status' , ['pending' , 'accepted' , 'rejected'])->default('pending');
+            $table->string('invitee_name');
+            $table->string('invitee_phone')->unique();
+            $table->enum('status', ['pending', 'accepted', 'rejected'])->default('pending');
             $table->timestamps();
         });
     }
+
 
     /**
      * Reverse the migrations.

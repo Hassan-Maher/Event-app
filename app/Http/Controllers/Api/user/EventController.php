@@ -24,6 +24,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Unique;
 
 class EventController extends Controller
 {
@@ -333,8 +336,9 @@ class EventController extends Controller
     public function send_invitation(Request $request , $event_id)
     {
         $validator = Validator::make($request->all(), [
-            'ids' => ['required', 'array'],
-            'ids.*' => ['exists:users,id' ,'distinct'],
+            'users'         => ['required', 'array'],
+            'users.*.name'  => ['string'],
+            'users.*.phone' => ['string' , 'regex:/^\d{1,4}[0-9]{7,12}$/' , 'unique:event_invitations,invitee_phone'],
         ], [], []);
 
         if ($validator->fails()) {
@@ -349,44 +353,54 @@ class EventController extends Controller
         {
             return ApiResponse::sendResponse(403 , 'you are not allowed to invite in this event' , []);
         }
-        $inviter_id = $request->user()->id;
+
+
+        $inviter = $request->user();
 
         $sucess_invitations = [];
         $failed_invitations = [];
-        foreach ($request->ids as $invitee_id) 
+        foreach ($request->users as $user) 
         {
-            $user = User::find($invitee_id);
-            if($user->role == 'provider')
-            {
-                $failed_invitations[] = ['name' =>  $user->name , 'reason' => 'is provider not user'];
-                continue;
-            }
+
             $exist = EventInvitation::where('event_id', $event_id)
-                ->where('invitee_id', $invitee_id)
+                ->where('invitee_phone', $user['phone'])
                 ->exists();
 
             if ($exist) 
             {
-                $failed_invitations[] = ['name' => $user->name , 'reason' => ' already invited'];
+                $failed_invitations[] = ['name' => $user['name'] , 'reason' => ' already invited'];
                 continue; 
             }
-            if($request->user()->id == $invitee_id)
+            if($request->user()->phone == $user['phone'])
             {
-                $failed_invitations[] = ['name' => $user->name , 'reason' => ' you send to your self'];
+                $failed_invitations[] = ['name' => $user['name'] , 'reason' => ' you send to yourself'];
                 continue;
             }
 
             $event->invitations()->create([
-                'inviter_id' => $inviter_id,
-                'invitee_id' => $invitee_id,
+                'inviter_id' => $inviter->id,
+                'invitee_name' => $user['name'],
+                'invitee_phone' =>$user['phone'],
             ]);
-            $sucess_invitations[] = ['name' => $user->name];
+
             
+            $sucess_invitations[] = [
+                'name' => $user['name'],
+                ];
+                
         }
+
+        $url = url("/api/invitations/event/{$event->id}/respond");
+            
+        $message = "🎉 دعوة من {$inviter->name} 🎉%0A"
+        ."تمت دعوتك لحضور مناسبة: *{$event->title}*%0A%0A"
+        ."للرد  على الدعوة اضغط هنا 👇%0 A{$url}%0A%0A";
+
+        $whatsappLink = "https://wa.me/{$user['phone']}?text={$message}";
 
         if(count($failed_invitations) && count($sucess_invitations))
         {
-            return ApiResponse::sendResponse(200 , 'some invitation failed' , ['failed_invitation' => $failed_invitations]);
+            return ApiResponse::sendResponse(200 , 'some invitation failed' , ['failed_invitation' => $failed_invitations , 'success_invitations' => $sucess_invitations , 'whatsapp_link' => $whatsappLink , 'message' => $message]);
         }
         elseif(count($failed_invitations))
         {
@@ -394,7 +408,7 @@ class EventController extends Controller
         }
         elseif(count($sucess_invitations))
         {
-            return ApiResponse::sendResponse(200 , 'All invitation send successfully' , []);
+            return ApiResponse::sendResponse(200 , 'All invitation send successfully' , [ 'success invitations' => $sucess_invitations , 'whatsapp_link' => $whatsappLink]);
         }
 
     }
@@ -411,20 +425,21 @@ class EventController extends Controller
         $event = Event::findOrFail($event_id);
 
 
-        $invitations = $event->invitations()->with('invitee')->get();
+        $invitations = $event->invitations;
         
         if($request->has('status'))
         {
-            $invitations = $event->invitations()->with('invitee')->where('status' , $request->status)->get();
+            $invitations = $event->invitations()->where('status' , $request->status)->get();
         }
 
+        if(count($invitations) < 1)
+            return ApiResponse::sendResponse(404 , 'guests is emtpy' , []);
         $data = $invitations->map(function($invitation)
         {
             return [
                 'id' => $invitation->id,
-                'invitee_id' => $invitation->invitee_id??null,
-                'invitee_name' => $invitation->invitee->name??null,
-                'status' => $invitation->status
+                'invitee_name' => $invitation->invitee_name??null,
+                'invitee_phone' => $invitation->invitee_phone??null,
             ];
         });
 
@@ -441,13 +456,12 @@ class EventController extends Controller
             return ApiResponse::sendResponse(422, 'verify Validation Errors', $validator->messages()->all());
         }
         $user = $request->user();
-
-        $invitations = $user->recievedInvitations()->with('event.user')->get();
+        $phone = ltrim($user->phone ,'+');
         
-        if($request->has('status'))
+        $invitations = EventInvitation::where('phone' , $phone)->when($request->status , function ($query) use ($request)
         {
-            $invitations = $user->recievedInvitations()->with('event.user')->where('status' , $request->status)->get();    
-        }
+            $query->where('status' , $request->status);
+        })->get();
 
         $invitations_data = $invitations->map(function($invitation){
             return [
@@ -463,7 +477,6 @@ class EventController extends Controller
         
     }
 
-
     public function my_events(Request $request)
     {
         $user = $request->user();
@@ -476,35 +489,33 @@ class EventController extends Controller
         return ApiResponse::sendResponse(200 , 'events retrieved successfully' , EventMainResource::collection($events));
     }
 
-
-    public function confirm_invitation(Request $request , $invitation_id)
+    public function response(Request $request , $event_id)
     {
         $validator = Validator::make($request->all(), [
-            'confirm' => ['required', 'boolean'],
-        ], [], []);
+            'phone' => ['required' , 'exists:event_invitations,invitee_phone'],
+            'status' => 'required|in:accepted,rejected',
+        ]);
 
         if ($validator->fails()) {
-            return ApiResponse::sendResponse(422, 'verify Validation Errors', $validator->messages()->all());
+            return ApiResponse::sendResponse(422, 'Validation error', $validator->messages()->all());
         }
-        $invitation = EventInvitation::find($invitation_id);
+
+        $invitation = EventInvitation::where(['invitee_phone'=> $request->phone , 'event_id' => $event_id])->first();
+
         if(!$invitation)
-        {
-            return ApiResponse::sendResponse(404 , 'invitation not found' , []);
-        }
-        if($request->user()->id != $invitation->invitee_id)
-        {
-            return ApiResponse::sendResponse(403 , 'this invitation is not for you ' , ['is_allowed' => false]);
-        }
-
+            return ApiResponse::sendResponse(404 , 'invitation is not found' , []);
+        
         if($invitation->status != 'pending')
-        {
-            return ApiResponse::sendResponse(409 , 'invitation is already confirmed before' , []);
-        }
-        $status = $request->confirm? 'accepted' : 'rejected';
+            return ApiResponse::sendResponse(403 , 'invitation has been responsed' , ['is_response' => true]);
 
-        $invitation->update(['status' => $status]);
+        $invitation->update([
+            'status' => $request->status,
+        ]);
 
-        return ApiResponse::sendResponse(200 , 'invitation confirmed successfully' , $invitation);
+        return ApiResponse::sendResponse(200, 'Invitation '.$request->status.' successfully', [
+            'phone' => $invitation->invitee_phone,
+            'status' => $invitation->status
+        ]);
     }
 
 }

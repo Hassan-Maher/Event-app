@@ -35,8 +35,6 @@ class OrderController extends Controller
         
     }
 
-    
-
     public function show(Request $request , $item_id)
     {
         $item = OrderItem::with(['product' , 'package'])->findOrFail($item_id);
@@ -68,7 +66,10 @@ class OrderController extends Controller
         {
             return ApiResponse::sendResponse(403 , 'you are not allowed to do this action' , ['is_allowed' => false]);
         }
-        
+        if($item->status != 'pending')
+        {
+            return ApiResponse::sendResponse(403 , 'item already confirmed' , []);
+        }
         if($request->confirm)
         {
             $item->update([
@@ -81,7 +82,6 @@ class OrderController extends Controller
             'status' => 'rejected',
             'rejected_reason' => $request->has('rejected_reason')? $request->rejected_reason: null
             ]);
-          
         }
         $order = $item->order;
 
