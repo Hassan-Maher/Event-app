@@ -8,7 +8,7 @@ use App\Http\Controllers\Api\provider\SettingController;
 use App\Http\Controllers\Api\provider\StoreController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum' , 'isProvider'])->prefix('provider')->group(function(){
+Route::middleware(['auth:sanctum' , 'isProvider' , 'isActive'])->prefix('provider')->group(function(){
 
     Route::post('/store' , [StoreController::class ,  'store']);
 

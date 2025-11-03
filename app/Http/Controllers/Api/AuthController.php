@@ -239,7 +239,7 @@ class AuthController extends Controller
         if(!$user)
             return ApiResponse::sendResponse(404 , 'user not found' , []);
 
-        if(empty($user->otp) || ! $user->otp->is_verified)
+        if(empty($user->otp))
         {
             return ApiResponse::sendResponse(200 , 'please verify your code' , []);    
         }

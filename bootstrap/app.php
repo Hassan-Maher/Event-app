@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\HasStore;
+use App\Http\Middleware\IsActive;
 use App\Http\Middleware\IsProvider;
 use App\Http\Middleware\IsUser;
 use Illuminate\Foundation\Application;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'isProvider' => IsProvider::class,
             'hasStore'   => HasStore::class,
             'isUser'   => IsUser::class,
+            'isActive'   => IsActive::class,
         ]);   
     })
     ->withExceptions(function (Exceptions $exceptions): void {

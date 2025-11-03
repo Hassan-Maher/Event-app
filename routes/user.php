@@ -9,7 +9,7 @@ use App\Http\Controllers\Api\user\StoreController;
 use Illuminate\Support\Facades\Route;
 
 
-Route::middleware(['auth:sanctum' , 'isUser'])->group(function(){
+Route::middleware(['auth:sanctum' , 'isUser' , 'isActive'])->group(function(){
 
     Route::controller(ServiceController::class)->group(function(){
         Route::get('/all_categories' , 'all_categories');
