@@ -8,9 +8,20 @@ use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::where('role', 'beneficiary')->latest()->get();
+        
+        if ($request->search) 
+        {
+            $users = User::where('role', 'beneficiary')->where(function ($query) use($request){
+                $query->where('name', 'like', '%' . $request->search . '%')
+                ->orWhere('email', 'like', '%' . $request->search . '%')
+                ->orWhere('phone', 'like', '%' . $request->search . '%');
+            })->get();
+        }
+        else {
+            $users = User::where('role', 'beneficiary')->latest()->get();
+        }
 
         $total_users = User::where('role' , 'beneficiary')->count();
         $active_users = User::where(['role' => 'beneficiary' , 'is_active' => true])->count();
